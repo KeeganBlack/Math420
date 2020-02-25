@@ -24,19 +24,18 @@ ErrorNoisy_X_Small = zeros(1, 10);
 for eVal=1:2
 for i=1:9   
   for fileIndex=1:2
-    disp("--------------------------------------------------------------------------------")
     clean_file = files(i,1);
     noisy_file = files(i,2);
         
     %% load data
     
     if fileIndex == 1
-        disp(["Calculating Gram Matrices for ", clean_file, ": "])
+        disp(["Calculating Gram Matrices for ", clean_file])
         clean = fopen(clean_file,'r');
         clean_data = fscanf(clean, "%g");
         fclose(clean);
     else
-        disp(["Calculating Gram Matrices for ", noisy_file, ": "])
+        disp(["Calculating Gram Matrices for ", noisy_file])
         clean = fopen(noisy_file,'r');
         clean_data = fscanf(clean, "%g");
         fclose(clean);
@@ -67,17 +66,7 @@ for i=1:9
     [~, idx] = sort(R_clean);
     smallest = idx(2,:)';
     theta = [[1:100]' smallest];
-    
-    %{
-    Note:
-    - |<Ge_{i,j}, e_{i,j}> - d_{i,j}^2| is what is used in the slides. The
-      values did not seem equal when i played around with dummy values.
-    - The e_{i,j} used is the point closest to point i. I dont think that
-      this is the correct way to do this, so we will need to fix this.
-    %}
-    
-    disp("#### Minimizing trace G ####")
-        disp(["** Using tolerance: ", eps(eVal)])
+
         cvx_begin sdp
         cvx_quiet true;
         variable G(n,n) semidefinite;
@@ -85,18 +74,20 @@ for i=1:9
         subject to
             G == G';
             G*ones(n,1) == zeros(n,1);
-            for k=1:n
+            for k=1:size(distancesClean,2)
+                for m=2:size(distancesClean,2)
                 idx = theta(k,:);
                 e = zeros(n,1);
                 e(idx(1)) = 1;
                 e(idx(2)) = -1;
                 d = R_clean(idx);
                 abs(dot(G*e, e)- d) <= eps(1,eVal);
+               end 
             end   
         cvx_end
     
     %% Part 2
-    disp("#### Estimating G using Alg. 1 ####")
+% #### Estimating G using Alg. 1 ####
     
 % for clean data
 clean = fopen('Pair_psb420.dist','r');
@@ -158,15 +149,12 @@ G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
             ErrorNoisy_X_Small(i) = ErrorNoisy;
         end 
     end
-    
-    
-    disp("--------------------------------------------------------------------------------")
   end
 end
 end
 %% Part 4
 % We had some issues with the cvx modeling. It worked initially, then
-% returned the same matrix for all G's calculated hence the straight lines.
+% returned the same matrix for all G's calculated, hence the straight lines.
 hold on 
 plot(0:9, Error_X);
 plot(0:9, ErrorNoisy_X);
