@@ -28,17 +28,21 @@ for i=1:9
     clean_file = files(i,1);
     noisy_file = files(i,2);
         
-    disp(["Calculating Gram Matrices for ", clean_file, "and ", noisy_file, ": "])
     %% load data
+    
     if fileIndex == 1
+        disp(["Calculating Gram Matrices for ", clean_file, ": "])
         clean = fopen(clean_file,'r');
         clean_data = fscanf(clean, "%g");
         fclose(clean);
     else
+        disp(["Calculating Gram Matrices for ", noisy_file, ": "])
         clean = fopen(noisy_file,'r');
         clean_data = fscanf(clean, "%g");
         fclose(clean);
     end 
+    
+    
     n = clean_data(1);
 
         m = clean_data(2);
@@ -75,6 +79,7 @@ for i=1:9
     disp("#### Minimizing trace G ####")
         disp(["** Using tolerance: ", eps(eVal)])
         cvx_begin sdp
+        cvx_quiet true;
         variable G(n,n) semidefinite;
         minimize trace(G);
         subject to
@@ -135,21 +140,21 @@ v_noisy = 1/n*(SN*ones_vec - rhoNoisy*ones_vec);
 G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
     
     %% Part 3
-    
-    disp("#### Calculating Error ####")
-    Error = norm(G-G_true, 'fro')
-    ErrorNoisy = norm(G-G_noisy, 'fro')
    
     if eVal == 1
         if fileIndex == 1
-         Error_X(i) = Error;
+            Error = norm(G-G_true, 'fro')
+            Error_X(i) = Error;
         else
-        ErrorNoisy_X(i) = ErrorNoisy;
+            ErrorNoisy = norm(G-G_noisy, 'fro')
+            ErrorNoisy_X(i) = ErrorNoisy;
         end
     else 
         if fileIndex == 1
+            Error = norm(G-G_true, 'fro')
             Error_X_Small(i) = Error;
         else
+            ErrorNoisy = norm(G-G_noisy, 'fro')
             ErrorNoisy_X_Small(i) = ErrorNoisy;
         end 
     end
@@ -160,7 +165,8 @@ G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
 end
 end
 %% Part 4
-
+% We had some issues with the cvx modeling. It worked initially, then
+% returned the same matrix for all G's calculated hence the straight lines.
 hold on 
 plot(0:9, Error_X);
 plot(0:9, ErrorNoisy_X);
@@ -170,3 +176,20 @@ hold on
 plot(0:9, Error_X_Small);
 plot(0:9, ErrorNoisy_X_Small);
 hold off
+%% Written Responses
+
+% Question 1:
+% One could certainly determine the decay rate, but our optimization
+% is not following the correct rate of decay to do so. We could fit the
+% errors of the fit to calculate the least squares. Matlabs poly-fit would
+% most likely provide an adequate solution.
+
+% Question 2
+% A smaller epsilon should lead to an overall smaller error, as the
+% tolerance is narrower. This comes at the cost of calculation time.
+
+%Question 3
+% It might take a long time but there should be a solutoin as the equation
+% is convex and continous throughout (semi-definite matrix). However,
+% computers may not be able to have high precision/handle floating point
+% values well or complex numbers. 
