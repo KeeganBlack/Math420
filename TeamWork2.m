@@ -5,8 +5,7 @@ data = Sparse1Pair_psb420;
 
 format longEng % Highest precision 
 
-files = ["Pair_psb420.dist"       , "MeasuredPair_psb420.dist";
-         "Sparse1Pair_psb420.dist", "SparseNoisy1Pair_psb420.dist";
+files = ["Sparse1Pair_psb420.dist", "SparseNoisy1Pair_psb420.dist";
          "Sparse2Pair_psb420.dist", "SparseNoisy2Pair_psb420.dist";
          "Sparse3Pair_psb420.dist", "SparseNoisy3Pair_psb420.dist";
          "Sparse4Pair_psb420.dist", "SparseNoisy4Pair_psb420.dist";
@@ -24,22 +23,24 @@ ErrorNoisy_X_Small = zeros(1, 10);
 % If you just want to test on 1 file, change from i=1:10 to i=x:x
 for eVal=1:2
 for i=1:9   
+  for fileIndex=1:2
     disp("--------------------------------------------------------------------------------")
     clean_file = files(i,1);
     noisy_file = files(i,2);
         
     disp(["Calculating Gram Matrices for ", clean_file, "and ", noisy_file, ": "])
-    
     %% load data
-    clean = fopen(clean_file,'r');
-    clean_data = fscanf(clean, "%g");
-    fclose(clean);
-    
-    n = clean_data(1);
-    if i==1
-        distances_clean = clean_data(2:end);
-        R_clean = reshape(distances_clean, n, n);
+    if fileIndex == 1
+        clean = fopen(clean_file,'r');
+        clean_data = fscanf(clean, "%g");
+        fclose(clean);
     else
+        clean = fopen(noisy_file,'r');
+        clean_data = fscanf(clean, "%g");
+        fclose(clean);
+    end 
+    n = clean_data(1);
+
         m = clean_data(2);
         distances_clean = clean_data(3:end);
         distances_clean = reshape(distances_clean, 3, []);
@@ -51,7 +52,7 @@ for i=1:9
             dl = distances_clean(3, k);
             R_clean(il, jl) = dl;
         end
-    end
+ 
     
     R_clean = R_clean.^2; 
     %% Part 1
@@ -91,40 +92,47 @@ for i=1:9
     
     %% Part 2
     disp("#### Estimating G using Alg. 1 ####")
-    ones_vec = ones(n,1);
     
-    rho_clean = 1/(2*n) * ones_vec' * R_clean * ones_vec;
-    v_clean = 1/n*(R_clean*ones_vec - rho_clean*ones_vec);
-    G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*R_clean;
+% for clean data
+clean = fopen('Pair_psb420.dist','r');
+dataClean = fscanf(clean, "%g");
+fclose(clean);
+
+nClean = dataClean(1);
+distancesClean = dataClean(2:end);
+R = reshape(distancesClean, n, n);
+S = R.^2;
+
+% Following algorithim 1 for Gram matrix
+ones_vec = ones(n,1);
+
+rho_clean = 1/(2*n) * ones_vec' * S * ones_vec;
+v_clean = 1/n*(S*ones_vec - rho_clean*ones_vec);
+G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*S;
+
+   
+%     
+%     rho_clean = 1/(2*n) * ones_vec' * R_clean * ones_vec;
+%     v_clean = 1/n*(R_clean*ones_vec - rho_clean*ones_vec);
+%     G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*R_clean;
     
-    % for noisy data
-    noisy = fopen(noisy_file,'r');
-    noisy_data = fscanf(noisy, "%g");
-    fclose(noisy);
     
-    n = noisy_data(1);
-    if i==1
-        distances_noisy = noisy_data(2:end);
-        R_noisy = reshape(distances_noisy, n, n);
-    else
-        m = noisy_data(2);
-        distances_noisy = noisy_data(3:end);
-        distances_noisy = reshape(distances_noisy, 3, []);
-        R_noisy = zeros(n,n);
-        
-        for k=1:size(distances_noisy, 2)
-            il = distances_noisy(1, k);
-            jl = distances_noisy(2, k);
-            dl = distances_noisy(3, k);
-            R_noisy(il, jl) = dl;
-        end
-    end
     
-    R_noisy = R_noisy.^2;
-    
-    rho_noisy = 1/(2*n) * ones_vec' * R_noisy * ones_vec;
-    v_noisy = 1/n*(R_noisy*ones_vec - rho_noisy*ones_vec);
-    G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*R_noisy;
+% for noisy data
+noisy = fopen('MeasuredPair_psb420.dist','r');
+dataNoisy = fscanf(clean, "%g");
+fclose(noisy);
+
+n = dataNoisy(1);
+distancesNoisy = dataNoisy(2:end);
+RN = reshape(distancesNoisy, n, n);
+SN = RN.^2;
+
+ones_vec = ones(n,1);
+
+rhoNoisy = 1/(2*n) * ones_vec' * SN * ones_vec;
+v_noisy = 1/n*(SN*ones_vec - rhoNoisy*ones_vec);
+G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
     
     %% Part 3
     
@@ -133,16 +141,22 @@ for i=1:9
     ErrorNoisy = norm(G-G_noisy, 'fro')
    
     if eVal == 1
+        if fileIndex == 1
          Error_X(i) = Error;
-    ErrorNoisy_X(i) = ErrorNoisy;
+        else
+        ErrorNoisy_X(i) = ErrorNoisy;
+        end
     else 
-        Error_X_Small(i) = Error;
-    ErrorNoisy_X_Small(i) = ErrorNoisy;
-    end 
-    
+        if fileIndex == 1
+            Error_X_Small(i) = Error;
+        else
+            ErrorNoisy_X_Small(i) = ErrorNoisy;
+        end 
+    end
     
     
     disp("--------------------------------------------------------------------------------")
+  end
 end
 end
 %% Part 4
