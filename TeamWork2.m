@@ -44,111 +44,98 @@ for i=1:9
     
     n = clean_data(1);
 
-        m = clean_data(2);
-        distances_clean = clean_data(3:end);
-        distances_clean = reshape(distances_clean, 3, []);
-        R_clean = zeros(n,n);
-        
-        for k=1:size(distances_clean, 2)
-            il = distances_clean(1, k);
-            jl = distances_clean(2, k);
-            dl = distances_clean(3, k);
-            R_clean(il, jl) = dl;
-        end
+    m = clean_data(2);
+    distances_clean = clean_data(3:end);
+    distances_clean = reshape(distances_clean, 3, []);
+    R_clean = zeros(n,n);
+
+    for k=1:size(distances_clean, 2)
+        il = distances_clean(1, k);
+        jl = distances_clean(2, k);
+        dl = distances_clean(3, k);
+        R_clean(il, jl) = dl;
+    end
  
     
     R_clean = R_clean.^2; 
     %% Part 1
     
     eps = [1 0.1];
-    
-    E = zeros(n,n);
+
     [~, idx] = sort(R_clean);
     smallest = idx(2,:)';
     theta = [[1:100]' smallest];
-
-        cvx_begin sdp
-        cvx_quiet true;
-        variable G(n,n) semidefinite;
-        minimize trace(G);
-        subject to
-            G == G';
-            G*ones(n,1) == zeros(n,1);
-            for k=1:size(distancesClean,2)
-                for m=2:size(distancesClean,2)
-                idx = theta(k,:);
-                e = zeros(n,1);
-                e(idx(1)) = 1;
-                e(idx(2)) = -1;
-                d = R_clean(idx);
-                abs(dot(G*e, e)- d) <= eps(1,eVal);
-               end 
-            end   
-        cvx_end
+    e = zeros(n,1);
     
-    %% Part 2
-% #### Estimating G using Alg. 1 ####
-    
-% for clean data
-clean = fopen('Pair_psb420.dist','r');
-dataClean = fscanf(clean, "%g");
-fclose(clean);
-
-nClean = dataClean(1);
-distancesClean = dataClean(2:end);
-R = reshape(distancesClean, n, n);
-S = R.^2;
-
-% Following algorithim 1 for Gram matrix
-ones_vec = ones(n,1);
-
-rho_clean = 1/(2*n) * ones_vec' * S * ones_vec;
-v_clean = 1/n*(S*ones_vec - rho_clean*ones_vec);
-G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*S;
-
-   
-%     
-%     rho_clean = 1/(2*n) * ones_vec' * R_clean * ones_vec;
-%     v_clean = 1/n*(R_clean*ones_vec - rho_clean*ones_vec);
-%     G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*R_clean;
-    
-    
-    
-% for noisy data
-noisy = fopen('MeasuredPair_psb420.dist','r');
-dataNoisy = fscanf(clean, "%g");
-fclose(noisy);
-
-n = dataNoisy(1);
-distancesNoisy = dataNoisy(2:end);
-RN = reshape(distancesNoisy, n, n);
-SN = RN.^2;
-
-ones_vec = ones(n,1);
-
-rhoNoisy = 1/(2*n) * ones_vec' * SN * ones_vec;
-v_noisy = 1/n*(SN*ones_vec - rhoNoisy*ones_vec);
-G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
-    
-    %% Part 3
-   
-    if eVal == 1
-        if fileIndex == 1
-            Error = norm(G-G_true, 'fro')
-            Error_X(i) = Error;
-        else
-            ErrorNoisy = norm(G-G_noisy, 'fro')
-            ErrorNoisy_X(i) = ErrorNoisy;
-        end
-    else 
-        if fileIndex == 1
-            Error = norm(G-G_true, 'fro')
-            Error_X_Small(i) = Error;
-        else
-            ErrorNoisy = norm(G-G_noisy, 'fro')
-            ErrorNoisy_X_Small(i) = ErrorNoisy;
+    cvx_begin sdp
+    variable G(n,n) semidefinite;
+    minimize trace(G)
+    subject to
+        G == G';
+        G*ones(n,1) == zeros(n,1);
+        for e=1:size(distances_clean,1)
+            E=zeros(n,1);
+            E(distances_clean(1,e),1)=1;
+            E(distances_clean(2,e),1)=-1;
+            abs(dot(G*E, E)-distances_clean(3,e)) <= eps(1, eVal)
         end 
-    end
+    cvx_end
+
+    %% Part 2
+    % #### Estimating G using Alg. 1 ####
+
+    % for clean data
+    clean = fopen('Pair_psb420.dist','r');
+    dataClean = fscanf(clean, "%g");
+    fclose(clean);
+
+    nClean = dataClean(1);
+    distancesClean = dataClean(2:end);
+    R = reshape(distancesClean, n, n);
+    S = R.^2;
+
+    % Following algorithim 1 for Gram matrix
+    ones_vec = ones(n,1);
+
+    rho_clean = 1/(2*n) * ones_vec' * S * ones_vec;
+    v_clean = 1/n*(S*ones_vec - rho_clean*ones_vec);
+    G_true = 1/2*v_clean*ones_vec' + 1/2*ones_vec*v_clean' - 1/2.*S;
+
+    % for noisy data
+    noisy = fopen('MeasuredPair_psb420.dist','r');
+    dataNoisy = fscanf(clean, "%g");
+    fclose(noisy);
+
+    n = dataNoisy(1);
+    distancesNoisy = dataNoisy(2:end);
+    RN = reshape(distancesNoisy, n, n);
+    SN = RN.^2;
+
+    ones_vec = ones(n,1);
+
+    rhoNoisy = 1/(2*n) * ones_vec' * SN * ones_vec;
+    v_noisy = 1/n*(SN*ones_vec - rhoNoisy*ones_vec);
+    G_noisy = 1/2*v_noisy*ones_vec' + 1/2*ones_vec*v_noisy' - 1/2.*SN;
+
+        %% Part 3
+
+        if eVal == 1
+            if fileIndex == 1
+                Error = norm(G-G_true, 'fro')
+                Error_X(i) = Error;
+            else
+                ErrorNoisy = norm(G-G_noisy, 'fro')
+                ErrorNoisy_X(i) = ErrorNoisy;
+            end
+        else 
+            if fileIndex == 1
+                Error = norm(G-G_true, 'fro')
+                Error_X_Small(i) = Error;
+            else
+                ErrorNoisy = norm(G-G_noisy, 'fro')
+                ErrorNoisy_X_Small(i) = ErrorNoisy;
+            end 
+        end
   end
 end
 end
