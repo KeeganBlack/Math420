@@ -66,6 +66,7 @@ for i=1:9
     smallest = idx(2,:)';
     theta = [[1:100]' smallest];
     e = zeros(n,1);
+    size(distances_clean,2);
     
     cvx_begin sdp
     variable G(n,n) semidefinite;
@@ -73,7 +74,7 @@ for i=1:9
     subject to
         G == G';
         G*ones(n,1) == zeros(n,1);
-        for e=1:size(distances_clean,1)
+        for e=1:size(distances_clean,2)
             E=zeros(n,1);
             E(distances_clean(1,e),1)=1;
             E(distances_clean(2,e),1)=-1;
